@@ -372,9 +372,9 @@ async def test_comprehensive_scenarios(dut):
     ]
     
     for i, (addresses, cs_signals, description) in enumerate(test_cases):
-        # For subsequent iterations, wait for ReadOnly phase to complete
+        # For subsequent iterations, advance simulation to exit ReadOnly phase
         if i > 0:
-            await ReadOnly()
+            await NextTimeStep()
         
         # Set new inputs
         dut.address_P0.value = addresses[0]
