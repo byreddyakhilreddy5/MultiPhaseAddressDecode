@@ -82,8 +82,7 @@ async def set_inputs(dut, addr_p0, addr_p1, addr_p2, addr_p3, cs_p0, cs_p1, cs_p
     dut.cs_P1.value = cs_p1
     dut.cs_P2.value = cs_p2
     dut.cs_P3.value = cs_p3
-    await ReadOnly()  # Allow combinational logic to settle
-    await ReadOnly()
+    await Timer(1, unit="us")  # Allow combinational logic to settle
 
 
 @cocotb.test()
@@ -412,4 +411,5 @@ def test_addr_decode_runner():
     )
     
     runner.test(hdl_toplevel="addr_decode", test_module="test_addr_decode")
+
 
