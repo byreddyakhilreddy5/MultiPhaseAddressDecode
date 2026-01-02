@@ -1,4 +1,7 @@
 module addr_decode (
+    input  wire        clk,
+    input  wire        rst_n,        // active-low reset (optional but recommended)
+
     // Address per phase
     input  wire [13:0] address_P0,
     input  wire [13:0] address_P1,
@@ -11,9 +14,9 @@ module addr_decode (
     input  wire        cs_P2,
     input  wire        cs_P3,
 
-    // Outputs
-    output wire [55:0] addr_out,   // concatenated processed address
-    output wire [3:0]  cs_out      // concatenated CS
+    // Registered outputs (1-cycle delayed)
+    output reg  [55:0] addr_out,
+    output reg  [3:0]  cs_out
 );
 
     // Internal arrays
@@ -23,7 +26,7 @@ module addr_decode (
     wire        cs_prev  [0:3];
     wire        all_ones [0:3];
 
-    // Map inputs to arrays
+    // Map inputs
     assign addr_phase[0] = address_P0;
     assign addr_phase[1] = address_P1;
     assign addr_phase[2] = address_P2;
@@ -47,29 +50,35 @@ module addr_decode (
             // Detect all-ones address
             assign all_ones[i] = &addr_phase[i];
 
-            // Conditional inversion logic
+            // Conditional inversion logic (combinational)
             assign addr_phase_processed[i] =
                 (all_ones[i] && !(cs_prev[i] && cs_phase[i])) ?
-                    addr_phase[i] :        // do NOT invert
-                    ~addr_phase[i];        // invert
+                    addr_phase[i] :
+                    ~addr_phase[i];
 
         end
     endgenerate
 
-    // Concatenate processed addresses (P3 MSB, P0 LSB)
-    assign addr_out = {
-        addr_phase_processed[3],
-        addr_phase_processed[2],
-        addr_phase_processed[1],
-        addr_phase_processed[0]
-    };
+    // Register outputs → available next clock cycle
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            addr_out <= 56'b0;
+            cs_out   <= 4'b0;
+        end else begin
+            addr_out <= {
+                addr_phase_processed[3],
+                addr_phase_processed[2],
+                addr_phase_processed[1],
+                addr_phase_processed[0]
+            };
 
-    // Concatenate CS (P3 MSB, P0 LSB)
-    assign cs_out = {
-        cs_phase[3],
-        cs_phase[2],
-        cs_phase[1],
-        cs_phase[0]
-    };
+            cs_out <= {
+                cs_phase[3],
+                cs_phase[2],
+                cs_phase[1],
+                cs_phase[0]
+            };
+        end
+    end
 
 endmodule
