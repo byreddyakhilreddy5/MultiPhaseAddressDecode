@@ -128,23 +128,34 @@ NOT invert if: (address_Pi == all_ones) AND NOT (cs_prev[Pi] AND cs_Pi)
 
 For each phase Pi (i = 0, 1, 2, 3):
 
+**⚠️ IMPORTANT: Use `assign` statements to ensure outputs are always defined:**
+
 ```systemverilog
 // Detect all-ones
-all_ones[i] = &address_Pi;
+assign all_ones[i] = &address_Pi;
 
-// Conditional inversion
+// Conditional inversion - MUST use assign with ternary operator
+// This ensures the output is ALWAYS assigned a value (no X/Z states)
+assign addr_phase_processed[i] = (all_ones[i] && !(cs_prev[i] && cs_Pi)) ?
+                                  address_Pi :      // Do NOT invert
+                                  ~address_Pi;      // Invert
+```
+
+**❌ DO NOT use this pattern (may leave outputs undefined):**
+```systemverilog
+// WRONG: If-else without assign may leave outputs undefined
 if (all_ones[i] && !(cs_prev[i] && cs_Pi)) begin
-    addr_phase_processed[i] = address_Pi;  // Do NOT invert
+    addr_phase_processed[i] = address_Pi;
 end else begin
-    addr_phase_processed[i] = ~address_Pi;  // Invert
+    addr_phase_processed[i] = ~address_Pi;
 end
 ```
 
-**Equivalent combinational assignment:**
+**✅ CORRECT: Always use `assign` with ternary operator for combinational logic:**
 ```systemverilog
-addr_phase_processed[i] = (all_ones[i] && !(cs_prev[i] && cs_Pi)) ?
-                           address_Pi :      // Do NOT invert
-                           ~address_Pi;      // Invert
+assign addr_phase_processed[i] = (all_ones[i] && !(cs_prev[i] && cs_Pi)) ?
+                                  address_Pi :      // Do NOT invert
+                                  ~address_Pi;      // Invert
 ```
 
 ### Truth Table for Inversion Decision
@@ -167,14 +178,18 @@ addr_phase_processed[i] = (all_ones[i] && !(cs_prev[i] && cs_Pi)) ?
 
 After all phases are processed, concatenate the processed addresses in descending phase order:
 
-```
-addr_out[55:0] = {
+**⚠️ CRITICAL: Use `assign` statement to ensure output is always defined:**
+
+```systemverilog
+assign addr_out[55:0] = {
     addr_phase_processed[3],  // P3: bits [55:42] (MSB)
     addr_phase_processed[2],  // P2: bits [41:28]
     addr_phase_processed[1],  // P1: bits [27:14]
     addr_phase_processed[0]   // P0: bits [13:0]  (LSB)
-}
+};
 ```
+
+**All 56 bits of `addr_out` must be assigned - no undefined values allowed.**
 
 **Bit Mapping:**
 - `addr_out[55:42]` = `addr_phase_processed[3]` (P3, 14 bits)
@@ -186,14 +201,18 @@ addr_out[55:0] = {
 
 Concatenate chip-selects in descending phase order:
 
-```
-cs_out[3:0] = {
+**⚠️ CRITICAL: Use `assign` statement to ensure output is always defined:**
+
+```systemverilog
+assign cs_out[3:0] = {
     cs_P3,  // Bit [3] (MSB)
     cs_P2,  // Bit [2]
     cs_P1,  // Bit [1]
     cs_P0   // Bit [0] (LSB)
-}
+};
 ```
+
+**All 4 bits of `cs_out` must be assigned - no undefined values allowed.**
 
 **Bit Mapping:**
 - `cs_out[3]` = `cs_P3`
@@ -204,6 +223,29 @@ cs_out[3:0] = {
 ---
 
 ## Implementation Guidelines
+
+### ⚠️ CRITICAL: Avoiding Undefined (X/Z) Values
+
+**All outputs MUST be assigned in all cases to avoid undefined (X/Z) values:**
+
+1. **Use `assign` statements for all outputs** - Never leave outputs unassigned
+2. **Ensure all paths assign values** - Every conditional must have a value assigned
+3. **Use combinational logic only** - No sequential logic that could leave outputs undefined
+4. **Test that outputs are always driven** - All bits of `addr_out[55:0]` and `cs_out[3:0]` must have defined values
+
+**Common mistake:** Using `if-else` without `else` clause, or incomplete conditional assignments that leave outputs undefined.
+
+**Correct pattern:**
+```systemverilog
+// ✅ CORRECT: Always assigns a value
+assign addr_phase_processed[i] = (condition) ? value1 : value2;
+
+// ❌ WRONG: May leave output undefined
+if (condition) begin
+    addr_phase_processed[i] = value1;
+end
+// Missing else clause = undefined value!
+```
 
 ### Required Internal Signals
 
@@ -344,6 +386,8 @@ cs_out[3:0] = {
 
 - [ ] Module name is `addr_decode`
 - [ ] Ports match specification exactly (4 address inputs, 4 CS inputs, 2 outputs)
+- [ ] **All outputs are assigned using `assign` statements (no unassigned outputs)**
+- [ ] **Every conditional has both true and false branches that assign values**
 - [ ] Previous phase CS calculated correctly: `cs_prev[0]=0`, `cs_prev[i]=cs_phase[i-1]`
 - [ ] All-ones detection implemented: `all_ones[i] = &addr_phase[i]`
 - [ ] Conditional inversion logic correct: NOT invert if `all_ones && !(cs_prev && cs_phase)`
@@ -352,5 +396,6 @@ cs_out[3:0] = {
 - [ ] CS output concatenated correctly: `{P3, P2, P1, P0}` (4 bits total)
 - [ ] All logic is combinational (no clocks or registers)
 - [ ] All code paths covered
+- [ ] **No undefined (X/Z) values in any output - verify all outputs are always assigned**
 
 ---
