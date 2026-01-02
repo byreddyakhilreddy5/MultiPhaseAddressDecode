@@ -373,7 +373,7 @@ async def test_comprehensive_scenarios(dut):
     
     for addresses, cs_signals, description in test_cases:
         # Add a small delay before setting inputs to avoid ReadOnly phase issues
-        await Timer(1, units="ns")
+        await Timer(10, unit="ns")
         await set_inputs(dut, addresses[0], addresses[1], addresses[2], addresses[3],
                          cs_signals[0], cs_signals[1], cs_signals[2], cs_signals[3])
         
