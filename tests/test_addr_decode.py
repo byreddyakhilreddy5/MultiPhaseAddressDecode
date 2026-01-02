@@ -371,21 +371,38 @@ async def test_comprehensive_scenarios(dut):
         ([0x3FFF, 0x2000, 0x3FFF, 0x1000], [1, 0, 1, 0], "Mixed all-ones and non-all-ones"),
     ]
     
-    for i, (addresses, cs_signals, description) in enumerate(test_cases):
-        # For subsequent iterations, advance simulation to exit ReadOnly phase
-        if i > 0:
-            await NextTimeStep()
-        
-        # Set new inputs
-        dut.address_P0.value = addresses[0]
-        dut.address_P1.value = addresses[1]
-        dut.address_P2.value = addresses[2]
-        dut.address_P3.value = addresses[3]
-        dut.cs_P0.value = cs_signals[0]
-        dut.cs_P1.value = cs_signals[1]
-        dut.cs_P2.value = cs_signals[2]
-        dut.cs_P3.value = cs_signals[3]
-        await ReadOnly()  # Wait for combinational logic to settle
+    # Test first case
+    addresses, cs_signals, description = test_cases[0]
+    await set_inputs(dut, addresses[0], addresses[1], addresses[2], addresses[3],
+                     cs_signals[0], cs_signals[1], cs_signals[2], cs_signals[3])
+    expected_addr_out, expected_cs_out = ref.compute_outputs(addresses, cs_signals)
+    actual_addr_out = dut.addr_out.value.to_unsigned()
+    actual_cs_out = dut.cs_out.value.to_unsigned()
+    assert actual_addr_out == expected_addr_out, (
+        f"{description}: Address output mismatch: "
+        f"expected 0x{expected_addr_out:014X}, got 0x{actual_addr_out:014X}"
+    )
+    assert actual_cs_out == expected_cs_out, (
+        f"{description}: CS output mismatch: "
+        f"expected 0b{expected_cs_out:04b}, got 0b{actual_cs_out:04b}"
+    )
+    
+    # Test remaining cases with Timer to advance simulation
+    for addresses, cs_signals, description in test_cases[1:]:
+        await Timer(1, unit="step")  # Advance by one simulation step
+        await set_inputs(dut, addresses[0], addresses[1], addresses[2], addresses[3],
+                         cs_signals[0], cs_signals[1], cs_signals[2], cs_signals[3])
+        expected_addr_out, expected_cs_out = ref.compute_outputs(addresses, cs_signals)
+        actual_addr_out = dut.addr_out.value.to_unsigned()
+        actual_cs_out = dut.cs_out.value.to_unsigned()
+        assert actual_addr_out == expected_addr_out, (
+            f"{description}: Address output mismatch: "
+            f"expected 0x{expected_addr_out:014X}, got 0x{actual_addr_out:014X}"
+        )
+        assert actual_cs_out == expected_cs_out, (
+            f"{description}: CS output mismatch: "
+            f"expected 0b{expected_cs_out:04b}, got 0b{actual_cs_out:04b}"
+        )
         
         expected_addr_out, expected_cs_out = ref.compute_outputs(addresses, cs_signals)
         
