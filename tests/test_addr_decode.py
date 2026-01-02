@@ -357,21 +357,6 @@ async def test_previous_phase_cs_calculation(dut):
     )
 
 
-        expected_addr_out, expected_cs_out = ref.compute_outputs(addresses, cs_signals)
-        
-        actual_addr_out = dut.addr_out.value.to_unsigned()
-        actual_cs_out = dut.cs_out.value.to_unsigned()
-        
-        assert actual_addr_out == expected_addr_out, (
-            f"{description}: Address output mismatch: "
-            f"expected 0x{expected_addr_out:014X}, got 0x{actual_addr_out:014X}"
-        )
-        assert actual_cs_out == expected_cs_out, (
-            f"{description}: CS output mismatch: "
-            f"expected 0b{expected_cs_out:04b}, got 0b{actual_cs_out:04b}"
-        )
-
-
 # ✅ CRITICAL: Pytest wrapper function (required for HUD format)
 def test_addr_decode_runner():
     """Pytest wrapper for Cocotb tests"""
