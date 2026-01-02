@@ -371,11 +371,12 @@ async def test_comprehensive_scenarios(dut):
         ([0x3FFF, 0x2000, 0x3FFF, 0x1000], [1, 0, 1, 0], "Mixed all-ones and non-all-ones"),
     ]
     
-    for addresses, cs_signals, description in test_cases:
-        # Set inputs directly (combinational logic, no clock needed)
-        # Wait for ReadOnly phase to complete from previous iteration
-        await ReadOnly()
-        # Now set new inputs
+    for i, (addresses, cs_signals, description) in enumerate(test_cases):
+        # For subsequent iterations, wait for ReadOnly phase to complete
+        if i > 0:
+            await ReadOnly()
+        
+        # Set new inputs
         dut.address_P0.value = addresses[0]
         dut.address_P1.value = addresses[1]
         dut.address_P2.value = addresses[2]
