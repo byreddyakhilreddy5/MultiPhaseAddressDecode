@@ -372,10 +372,19 @@ async def test_comprehensive_scenarios(dut):
     ]
     
     for addresses, cs_signals, description in test_cases:
-        # Add a small delay before setting inputs to avoid ReadOnly phase issues
-        await Timer(10, unit="ns")
-        await set_inputs(dut, addresses[0], addresses[1], addresses[2], addresses[3],
-                         cs_signals[0], cs_signals[1], cs_signals[2], cs_signals[3])
+        # Set inputs directly (combinational logic, no clock needed)
+        # Wait for ReadOnly phase to complete from previous iteration
+        await ReadOnly()
+        # Now set new inputs
+        dut.address_P0.value = addresses[0]
+        dut.address_P1.value = addresses[1]
+        dut.address_P2.value = addresses[2]
+        dut.address_P3.value = addresses[3]
+        dut.cs_P0.value = cs_signals[0]
+        dut.cs_P1.value = cs_signals[1]
+        dut.cs_P2.value = cs_signals[2]
+        dut.cs_P3.value = cs_signals[3]
+        await ReadOnly()  # Wait for combinational logic to settle
         
         expected_addr_out, expected_cs_out = ref.compute_outputs(addresses, cs_signals)
         
