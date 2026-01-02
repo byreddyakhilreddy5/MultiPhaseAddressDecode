@@ -240,7 +240,7 @@ async def test_all_phases_independent(dut):
     # P2: all-ones, both CS asserted -> invert
     # P3: all-ones, prev=1, curr=0 -> NOT invert
     addresses = [0x0001, 0x3FFF, 0x3FFF, 0x3FFF]
-    cs_signals = [0, 0, 1, 0]  # P2 has both asserted (cs_P1=1, cs_P2=1)
+    cs_signals = [0, 1, 1, 0]  # P2 has both asserted (cs_P1=1, cs_P2=1), P3 has prev=1, curr=0
     
     await set_inputs(dut, addresses[0], addresses[1], addresses[2], addresses[3],
                      cs_signals[0], cs_signals[1], cs_signals[2], cs_signals[3])
@@ -372,6 +372,8 @@ async def test_comprehensive_scenarios(dut):
     ]
     
     for addresses, cs_signals, description in test_cases:
+        # Add a small delay before setting inputs to avoid ReadOnly phase issues
+        await Timer(1, units="ns")
         await set_inputs(dut, addresses[0], addresses[1], addresses[2], addresses[3],
                          cs_signals[0], cs_signals[1], cs_signals[2], cs_signals[3])
         
