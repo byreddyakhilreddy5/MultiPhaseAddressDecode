@@ -7,7 +7,7 @@ and chip-select conditions, then concatenates the results.
 """
 
 import cocotb
-from cocotb.triggers import Timer, ReadOnly
+from cocotb.triggers import Timer, ReadOnly, NextTimeStep
 
 
 class AddrDecodeReference:
